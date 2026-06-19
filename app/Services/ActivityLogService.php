@@ -20,4 +20,12 @@ class ActivityLogService
             'loggable_type' => get_class($model)
         ]);
     }
+    /**
+     * Mengambil semua data log aktivitas beserta relasi user-nya.
+     */
+    public function getAllLogs()
+    {
+        // Menggunakan Eloquent ORM, melakukan eager loading 'user', dan diurutkan dari yang terbaru
+        return ActivityLog::with('user')->latest()->paginate(10);
+    }
 }

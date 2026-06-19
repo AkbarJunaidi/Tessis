@@ -1,46 +1,42 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Inventory\InventoryController;
+use App\Http\Controllers\Project\ProjectController;
+use App\Http\Controllers\Task\TaskController;
+use App\Http\Controllers\Task\CommentController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\TaskController;
-use App\Http\Controllers\CommentController;
-use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ActivityLog\ActivityLogController;
 
-// ==========================================
-// Rute Umum (Bisa diakses tanpa login)
-// ==========================================
-
+// Redirect halaman utama ke login
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
-Route::get('/test', function () {
-    return "LARAVEL AKTIF";
+// Group rute untuk tamu (Guest) - Belum Login
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [LoginController::class, 'login']);
 });
 
-// dilindungi middleware pakai auth
-Route::middleware(['auth'])->group(function () {
-    
-    // Rute Dashboard Utama
+// Group rute terproteksi (Auth) - Harus Login Terlebih Dahulu
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Rute Manajemen Proyek (Gunakan custom slug untuk binding view detail)
-    Route::resource('projects', ProjectController::class)->except(['show']);
-    Route::get('projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
+    // Modul Inventory Management
+    Route::resource('inventory', InventoryController::class);
 
-    // Rute Manajemen Task di dalam Board
-    Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
-    Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
-    Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
-    Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+    // Modul Tracking Progress (Resource Proyek)
+    Route::resource('projects', ProjectController::class);
 
-    // Rute Komentar Task
-    Route::post('tasks/{task}/comments', [CommentController::class, 'store'])->name('comments.store');
-    Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    // Modul Tracking Progress (Resource Task Anak Proyek)
+    Route::resource('tasks', TaskController::class)->only(['create', 'store', 'show', 'destroy']);
+    Route::patch('tasks/{task}/update-status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
 
-    // Rute Manajemen Inventory
-    // (Catatan: Jika inventory juga butuh login, biarkan di dalam sini)
-    Route::resource('inventories', InventoryController::class);
+    // Modul Catatan Progress Kerja
+    Route::post('tasks/comments', [CommentController::class, 'store'])->name('tasks.comments.store');
 
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 });

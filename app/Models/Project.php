@@ -4,38 +4,36 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'description', 'user_id'];
+    protected $table = 'projects';
+
+    protected $fillable = [
+        'name',
+        'description',
+        'deadline',
+        'created_by',
+    ];
 
     /**
-     * Mendapatkan user pemilik proyek.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Mendapatkan semua task yang berada di dalam proyek ini.
+     * Relasi One-to-Many: Sebuah Project memiliki banyak Tasks.
      */
     public function tasks(): HasMany
     {
-        return $this->hasMany(Task::class);
+        return $this->hasMany(Task::class, 'project_id');
     }
 
     /**
-     * Mendapatkan semua log aktivitas terkait proyek ini (Polymorphic).
+     * Relasi BelongsTo: Proyek ini diinisiasi oleh seorang User.
      */
-    public function activityLogs(): MorphMany
+    public function creator(): BelongsTo
     {
-        return $this->morphMany(ActivityLog::class, 'loggable')->latest();
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

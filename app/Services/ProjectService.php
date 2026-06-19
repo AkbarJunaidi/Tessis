@@ -3,67 +3,37 @@
 namespace App\Services;
 
 use App\Models\Project;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class ProjectService
 {
-    protected $logService;
-
-    public function __construct(ActivityLogService $logService)
+    /**
+     * Mengambil daftar project dengan paginasi.
+     */
+    public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
-        $this->logService = $logService;
-    }
-
-    public function createProject(array $data): Project
-    {
-        return DB::transaction(function () use ($data) {
-            $data['slug'] = Str::slug($data['name']) . '-' . rand(1000, 9999);
-            $data['user_id'] = Auth::id();
-
-            $project = Project::create($data);
-            
-            // Catat ke Log Aktivitas
-            $this->logService->log($project, 'membuat project baru "' . $project->name . '"');
-
-            return $project;
-        });
-    }
-
-    public function updateProject(Project $project, array $data): Project
-    {
-        return DB::transaction(function () use ($project, $data) {
-            $oldName = $project->name;
-            $project->update($data);
-
-            if ($oldName !== $project->name) {
-                $this->logService->log($project, 'mengubah nama project dari "' . $oldName . '" menjadi "' . $project->name . '"');
-            } else {
-                $this->logService->log($project, 'memperbarui detail info project');
-            }
-
-            return $project;
-        });
-    }
-
-    public function deleteProject(Project $project): bool
-    {
-        return DB::transaction(function () use ($project) {
-            $this->logService->log($project, 'menghapus project "' . $project->name . '" (Soft Delete)');
-            return $project->delete();
-        });
+        return Project::with('creator')->latest()->paginate($perPage);
     }
 
     /**
-     * Menghitung progress persentase tugas yang selesai di dalam project.
+     * Menyimpan project baru ke database.
      */
-    public function calculateProgress(Project $project): int
+    public function createProject(array $data): Project
     {
-        $total = $project->tasks()->count();
-        if ($total === 0) return 0;
+        return Project::create([
+            'name'        => $data['name'],
+            'description' => $data['description'] ?? null,
+            'deadline'    => $data['deadline'],
+            'created_by'  => Auth::id(), // Mengikat ID user yang sedang login
+        ]);
+    }
 
-        $done = $project->tasks()->where('status', 'done')->count();
-        return (int) round(($done / $total) * 100);
+    /**
+     * Menghapus project secara aman (Soft Delete).
+     */
+    public function deleteProject(Project $project): bool
+    {
+        return $project->delete();
     }
 }

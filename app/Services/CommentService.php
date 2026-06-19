@@ -2,40 +2,44 @@
 
 namespace App\Services;
 
-use App\Models\TaskComment;
-use App\Models\Task;
-use Illuminate\Support\Facades\DB;
+use App\Models\Comment;
+use App\Models\ActivityLog; // <-- Mengimpor model ActivityLog milik Anda
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CommentService
 {
-    protected $logService;
-
-    public function __construct(ActivityLogService $logService)
+    /**
+     * Menyimpan catatan komentar baru sekaligus mencatatkan 
+     * jejak rekamnya ke dalam sistem log aktivitas polimorfik.
+     */
+    public function storeComment(array $data): Comment
     {
-        $this->logService = $logService;
-    }
-
-    public function addComment(Task $task, string $commentText): TaskComment
-    {
-        return DB::transaction(function () use ($task, $commentText) {
-            $comment = TaskComment::create([
-                'task_id' => $task->id,
-                'user_id' => Auth::id(),
-                'comment' => $commentText
+        // Menggunakan database transaction demi atomisitas data
+        return DB::transaction(function () use ($data) {
+            
+            // Menyimpan data komentar ke tabel task_comments melalui model Comment
+            $comment = Comment::create([
+                'task_id' => $data['task_id'],
+                'user_id' => Auth::id(), 
+                'comment' => $data['comment'],
             ]);
 
-            $this->logService->log($task, 'menambahkan komentar: "' . Str::limit($commentText, 30) . '"');
-            return $comment;
-        });
-    }
+            //Ambil informasi nama tugas untuk deskripsi log yang informatif
+            // Pastikan relasi 'task' sudah ada di model Comment Anda
+            $taskTitle = $comment->task ? $comment->task->title : 'Task #' . $data['task_id'];
+            $actorName = Auth::user()->name;
+            $logMessage = "User {$actorName} menambahkan komentar pada task: \"{$taskTitle}\"";
 
-    public function deleteComment(TaskComment $comment): bool
-    {
-        return DB::transaction(function () use ($comment) {
-            $task = $comment->task;
-            $this->logService->log($task, 'menghapus komentar diskusi');
-            return $comment->delete();
+           //Catat ke tabel activity_logs otomatis sesuai blueprint database design
+            ActivityLog::create([
+                'user_id'       => Auth::id(),
+                'activity'      => $logMessage,  // Sesuai dengan protected $fillable Anda: 'activity'
+                'loggable_type' => 'App\Models\Task',  // Menyatakan objek tipe yang ditarget adalah Task
+                'loggable_id'   => $data['task_id'], // Mengikat ID Task sebagai target polimorfik
+            ]);
+
+            return $comment;
         });
     }
 }

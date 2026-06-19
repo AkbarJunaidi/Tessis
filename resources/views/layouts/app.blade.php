@@ -1,48 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trello Task Tracker - Laravel 12</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/dist/css/box.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Dashboard') - Management Information System</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
     <style>
-        body { background-color: #f4f5f7; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .trello-board { display: flex; overflow-x: auto; padding: 15px 0; gap: 1rem; align-items: flex-start; min-height: calc(100vh - 160px); }
-        .trello-column { width: 280px; background-color: #f1f2f4; border-radius: 12px; padding: 12px; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-        .trello-column-header { font-weight: 700; font-size: 0.95rem; color: #44546f; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .task-card { background: white; border-radius: 8px; border: none; box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25); margin-bottom: 10px; transition: transform 0.1s ease, box-shadow 0.1s ease; cursor: pointer; }
-        .task-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(9, 30, 66, 0.15); }
-        .badge-low { background-color: #e3fcef; color: #006644; }
-        .badge-medium { background-color: #fff0b3; color: #a54800; }
-        .badge-high { background-color: #ffebe6; color: #bf2600; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            overflow-x: hidden;
+        }
+        #wrapper {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        #sidebar-wrapper {
+            min-width: 260px;
+            max-width: 260px;
+            background-color: #212529;
+            transition: all 0.3s ease;
+        }
+        #page-content-wrapper {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .main-content {
+            padding: 1.5rem;
+            flex: 1;
+        }
+        /* Responsive Breakpoints */
+        @media (max-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: -260px;
+            }
+            #sidebar-wrapper.toggled {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ route('dashboard') }}"><i class="bi bi-kanban-fill me-2"></i>TaskTracker</a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-link text-white me-3">Halo, {{ auth()->user()->name ?? 'User Magang' }}</span>
-                <form action="/logout" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-outline-light">Keluar</button>
-                </form>
-            </div>
-        </div>
-    </nav>
 
-    <div class="container mt-4">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-        @yield('content')
+    <div id="wrapper">
+        <div id="sidebar-wrapper" id="sidebarComponent">
+            @include('layouts.sidebar')
+        </div>
+
+        <div id="page-content-wrapper">
+            @include('layouts.navbar')
+
+            <main class="main-content">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @yield('content')
+            </main>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    @stack('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const toggleBtn = document.getElementById("menu-toggle");
+            if(toggleBtn) {
+                toggleBtn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    document.getElementById("sidebar-wrapper").classList.toggle("toggled");
+                });
+            }
+        });
+    </script>
 </body>
 </html>

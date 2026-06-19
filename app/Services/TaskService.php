@@ -3,67 +3,60 @@
 namespace App\Services;
 
 use App\Models\Task;
-use Illuminate\Support\Facades\DB;
+use App\Models\Project;
 
 class TaskService
 {
-    protected $logService;
-
-    public function __construct(ActivityLogService $logService)
+    /**
+     * Mengambil semua task yang terikat pada sebuah project berdasarkan status.
+     */
+    public function getTasksByProject(Project $project)
     {
-        $this->logService = $logService;
+        return Task::with('assignee', 'comments.user')
+            ->where('project_id', $project->id)
+            ->get()
+            ->groupBy('status');
     }
 
+    /**
+     * Menyimpan kartu task baru ke dalam database.
+     */
     public function createTask(array $data): Task
     {
-        return DB::transaction(function () use ($data) {
-            $task = Task::create($data);
-            
-            $this->logService->log($task, 'membuat task baru "' . $task->title . '" dengan prioritas ' . ucfirst($task->priority));
-            return $task;
-        });
+        return Task::create([
+            'project_id'  => $data['project_id'],
+            'title'       => $data['title'],
+            'description' => $data['description'] ?? null,
+            'status'      => $data['status'] ?? 'Todo',
+            'priority'    => $data['priority'] ?? 'Medium',
+            'deadline'    => $data['deadline'],
+            'assigned_to' => $data['assigned_to'] ?? null,
+        ]);
     }
 
-    public function updateTask(Task $task, array $data): Task
+    /**
+     * Mencari detail spesifik satu task berdasarkan ID beserta relasinya.
+     */
+    public function findTaskById(int $id): Task
     {
-        return DB::transaction(function () use ($task, $data) {
-            $oldPriority = $task->priority;
-            $task->update($data);
-
-            if ($oldPriority !== $task->priority) {
-                $this->logService->log($task, 'mengubah priority ' . ucfirst($oldPriority) . ' menjadi ' . ucfirst($task->priority));
-            } else {
-                $this->logService->log($task, 'memperbarui informasi detail task');
-            }
-
-            return $task;
-        });
+        return Task::with(['project', 'assignee', 'comments.user'])->findOrFail($id);
     }
 
-    public function updateStatus(Task $task, string $newStatus): Task
+    /**
+     * Mengubah status pengerjaan task menggunakan tombol/dropdown.
+     */
+    public function updateTaskStatus(Task $task, string $newStatus): bool
     {
-        return DB::transaction(function () use ($task, $newStatus) {
-            $oldStatus = $task->status;
-            $task->update(['status' => $newStatus]);
-
-            // Format pesan log agar mirip Git Commit History sesuai permintaan dokumen konsep
-            $statusLabels = [
-                'todo' => 'Todo',
-                'in_progress' => 'In Progress',
-                'review' => 'Review',
-                'done' => 'Done'
-            ];
-
-            $this->logService->log($task, 'mengubah status ' . $statusLabels[$oldStatus] . ' menjadi ' . $statusLabels[$newStatus]);
-            return $task;
-        });
+        return $task->update([
+            'status' => $newStatus
+        ]);
     }
 
+    /**
+     * Menghapus kartu tugas secara aman (Soft Delete).
+     */
     public function deleteTask(Task $task): bool
     {
-        return DB::transaction(function () use ($task) {
-            $this->logService->log($task, 'menghapus task "' . $task->title . '"');
-            return $task->delete();
-        });
+        return $task->delete();
     }
 }

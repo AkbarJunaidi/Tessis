@@ -4,45 +4,47 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['project_id', 'title', 'description', 'status', 'priority', 'deadline'];
+    protected $table = 'tasks';
 
-    /**
-     * Casting tipe data agar mutasi tanggal dihandle otomatis oleh Carbon.
-     */
-    protected $casts = [
-        'deadline' => 'date',
+    protected $fillable = [
+        'project_id',
+        'title',
+        'description',
+        'status',
+        'priority',
+        'deadline',
+        'assigned_to',
     ];
 
     /**
-     * Relasi ke proyek induk.
+     * Relasi BelongsTo: Kartu Task ini terikat pada sebuah Project parent.
      */
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     /**
-     * Relasi ke komentar-komentar di dalam task ini.
+     * Relasi BelongsTo: Task ini didelegasikan pengerjaannya kepada seorang User.
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Relasi One-to-Many: Sebuah Task memiliki banyak Komentar.
      */
     public function comments(): HasMany
     {
-        return $this->hasMany(TaskComment::class)->oldest();
-    }
-
-    /**
-     * Relasi polymorphic ke log aktivitas khusus task ini.
-     */
-    public function activityLogs(): MorphMany
-    {
-        return $this->morphMany(ActivityLog::class, 'loggable')->latest();
+        return $this->hasMany(Comment::class, 'task_id');
     }
 }
