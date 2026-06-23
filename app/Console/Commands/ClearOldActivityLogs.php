@@ -19,7 +19,6 @@ class ClearOldActivityLogs extends Command
         // Menentukan batas tanggal (30 hari yang lalu)
         $expirationDate = Carbon::now()->subDays(30);
 
-        // PERBAIKAN: Menggunakan whereDate agar editor mengenali pembanding waktu berbasis kolom objek dengan aman
         $deletedRows = ActivityLog::query()
             ->whereDate('created_at', '<', $expirationDate)
             ->delete();

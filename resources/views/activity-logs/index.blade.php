@@ -37,7 +37,7 @@
                                 </td>
 
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center gap-2">
                                         <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold font-monospace" style="width: 28px; height: 28px; font-size: 0.75rem;">
                                             {{ strtoupper(substr($log->user->name ?? 'US', 0, 2)) }}
                                         </div>

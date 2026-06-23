@@ -52,12 +52,14 @@
             Integrasi Data
         </li>
         <li class="nav-item mb-1">
-            <a href="#" class="nav-link text-white opacity-75 cursor-not-allowed" onclick="event.preventDefault(); alert('Modul Integrasi Data belum diimplementasikan.');">
+            {{-- AKTIF OTOMATIS: Menyala jika membuka index folder utama atau sedang masuk ke dalam sub-folder --}}
+            <a href="{{ route('folders.index') }}" class="nav-link text-white {{ request()->routeIs('folders.index') || request()->routeIs('folders.show') ? 'active fw-semibold' : 'opacity-75' }}">
                 <i class="bi bi-folder2-open me-2"></i> Folder Management
             </a>
         </li>
         <li class="nav-item mb-1">
-            <a href="#" class="nav-link text-white opacity-75 cursor-not-allowed" onclick="event.preventDefault(); alert('Modul Integrasi Data belum diimplementasikan.');">
+            {{-- AKTIF OTOMATIS: Menyala jika user membuka ruang penyimpanan berkas pribadi mereka --}}
+            <a href="{{ route('files.my-files') }}" class="nav-link text-white {{ request()->routeIs('files.my-files') ? 'active fw-semibold' : 'opacity-75' }}">
                 <i class="bi bi-file-earmark-arrow-up me-2"></i> My Files
             </a>
         </li>
