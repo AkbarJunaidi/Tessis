@@ -3,43 +3,60 @@
 namespace App\Services;
 
 use App\Models\Comment;
-use App\Models\ActivityLog; // <-- Mengimpor model ActivityLog milik Anda
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\ActivityLog\ActivityLogService;
+use Exception;
 
 class CommentService
 {
     /**
-     * Menyimpan catatan komentar baru sekaligus mencatatkan 
-     * jejak rekamnya ke dalam sistem log aktivitas polimorfik.
+     * @var ActivityLogService
+     */
+    protected $activityLogService;
+
+    /**
+     * Mendaftarkan ActivityLogService ke dalam Constructor melalui Dependency Injection.
+     */
+    public function __construct(ActivityLogService $activityLogService)
+    {
+        $this->activityLogService = $activityLogService;
+    }
+
+    /**
+     * Menyimpan catatan komentar baru sekaligus mencatatkan
+     * jejak rekamnya ke dalam sistem log aktivitas global.
+     *
+     * @param array $data
+     * @return Comment
+     * @throws Exception
      */
     public function storeComment(array $data): Comment
     {
-        // Menggunakan database transaction demi atomisitas data
         return DB::transaction(function () use ($data) {
-            
-            // Menyimpan data komentar ke tabel task_comments melalui model Comment
-            $comment = Comment::create([
-                'task_id' => $data['task_id'],
-                'user_id' => Auth::id(), 
-                'comment' => $data['comment'],
-            ]);
+            try {
+                // Menyimpan data komentar ke tabel task_comments melalui model Comment
+                $comment = Comment::create([
+                    'task_id' => $data['task_id'],
+                    'user_id' => Auth::id(),
+                    'comment' => $data['comment'],
+                ]);
 
-            //Ambil informasi nama tugas untuk deskripsi log yang informatif
-            // Pastikan relasi 'task' sudah ada di model Comment Anda
-            $taskTitle = $comment->task ? $comment->task->title : 'Task #' . $data['task_id'];
-            $actorName = Auth::user()->name;
-            $logMessage = "User {$actorName} menambahkan komentar pada task: \"{$taskTitle}\"";
+                // Ambil informasi nama tugas untuk deskripsi log yang informatif
+                $taskTitle = $comment->task ? $comment->task->title : 'ID #' . $data['task_id'];
 
-           //Catat ke tabel activity_logs otomatis sesuai blueprint database design
-            ActivityLog::create([
-                'user_id'       => Auth::id(),
-                'activity'      => $logMessage,  // Sesuai dengan protected $fillable Anda: 'activity'
-                'loggable_type' => 'App\Models\Task',  // Menyatakan objek tipe yang ditarget adalah Task
-                'loggable_id'   => $data['task_id'], // Mengikat ID Task sebagai target polimorfik
-            ]);
+                // Pemicu Log Audit Trail global menggunakan ActivityLogService milik Anda
+                $this->activityLogService->log(
+                    Auth::id(),
+                    'Tracking Progress',
+                    'Menambahkan komentar baru pada task "' . $taskTitle . '"'
+                );
 
-            return $comment;
+                return $comment;
+
+            } catch (Exception $e) {
+                throw new Exception('Gagal menyimpan komentar: ' . $e->getMessage());
+            }
         });
     }
 }

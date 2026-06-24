@@ -2,30 +2,32 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class ActivityLog extends Model
 {
-    use HasFactory;
-
-    protected $fillable = ['user_id', 'activity', 'loggable_type', 'loggable_id'];
-
     /**
-     * Menghubungkan log ke entitas target secara dinamis (Project atau Task).
+     * Nama tabel yang dikelola oleh model ini.
      */
-    public function loggable(): MorphTo
-    {
-        return $this->morphTo();
-    }
+    protected $table = 'activity_logs';
+
 
     /**
-     * Mengetahui user pelaku aktivitas.
+     * Atribut yang diizinkan untuk diisi secara massal (Mass Assignment Protection).
+     */
+    protected $fillable = [
+        'user_id',
+        'module',
+        'action',
+    ];
+
+    /**
+     * Relasi balik ke User yang melakukan aktivitas (Belongs To).
+     * Mengembalikan NULL jika aksi dilakukan secara otomatis oleh sistem.
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

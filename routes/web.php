@@ -37,7 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('tasks', TaskController::class)->only(['create', 'store', 'show', 'destroy']);
     Route::patch('tasks/{task}/update-status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
 
-    // Modul Catatan Progress Kerja
+    // Modul Catatan Progress Kerja-
     Route::post('tasks/comments', [CommentController::class, 'store'])->name('tasks.comments.store');
 
     // Modul Activity Log Utama

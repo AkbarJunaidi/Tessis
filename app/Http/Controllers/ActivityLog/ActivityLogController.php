@@ -3,28 +3,37 @@
 namespace App\Http\Controllers\ActivityLog;
 
 use App\Http\Controllers\Controller;
-use App\Services\ActivityLogService;
-use Illuminate\Http\Request;
+use App\Http\Requests\ActivityLog\ActivityLogFilterRequest;
+use App\Services\ActivityLog;
+use App\Services\ActivityLog\ActivityLogService;
+use Illuminate\View\View;
 
 class ActivityLogController extends Controller
 {
-    protected $activityLogService;
+    protected ActivityLogService $activityLogService;
 
-    // Inject Service Layer melalui Constructor
+    /**
+     * Dependency Injection otomatis via Constructor.
+     */
     public function __construct(ActivityLogService $activityLogService)
     {
         $this->activityLogService = $activityLogService;
     }
 
     /**
-     * Menampilkan daftar log aktivitas.
+     * Menampilkan halaman utama log audit trail beserta penanganan data filternya.
      */
-    public function index()
+    public function index(ActivityLogFilterRequest $request): View
     {
-        // Controller HANYA memanggil service untuk mengambil data log
-        $activityLogs = $this->activityLogService->getAllLogs();
+        // Menangkap data input yang telah tervalidasi dengan ketat
+        $filters = $request->validated();
 
-        // Mengembalikan response ke view sesuai coding standard
-        return view('activity-logs.index', compact('activityLogs'));
+        // Memanggil data log hasil filter dari lapisan Service Layer
+        $logs = $this->activityLogService->getFilteredLogs($filters);
+
+        // Memanggil data user untuk kebutuhan pengisian selectbox filter komponen
+        $users = $this->activityLogService->getAllUsersForFilter();
+
+        return view('activity-logs.index', compact('logs', 'users'));
     }
 }

@@ -11,15 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('activity_logs', function (Blueprint $table) {
-            $table->id();
-            // Menghubungkan ke tabel users (siapa yang beraktivitas)
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            // Menyimpan string deskripsi log aktivitas
-            $table->string('activity');
-            // Menampung class target (loggable_type) dan ID target (loggable_id) secara polimorfik
-            $table->nullableMorphs('loggable');
-            $table->timestamps();
+        Schema::create('activity_logs', function (Blueprint $class) {
+            $class->id();
+
+            // Foreign key relasi ke tabel users dengan penanganan jika user dihapus
+            $class->foreignId('user_id')
+                ->nullable()
+                ->constrained('users')
+                ->onDelete('set null');
+
+            // Menyimpan nama kluster modul utama sistem
+            $class->string('module');
+
+            // Menyimpan jenis tindakan spesifik yang dilakukan user
+            $class->string('action');
+
+            // Timestamps otomatis (created_at berfungsi sebagai kolom Date Time)
+            $class->timestamps();
+
+            // Indexing dasar untuk optimasi performa filtering dan pencarian data
+            $class->index(['module', 'action']);
+            $class->index('created_at');
         });
     }
 

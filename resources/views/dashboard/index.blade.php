@@ -100,46 +100,62 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm border-0 rounded-3 bg-white">
-                <div class="card-header bg-white border-bottom py-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-clock-history text-primary fs-5"></i>
-                        <h5 class="card-title fw-semibold text-dark m-0">Recent Activity Log</h5>
+                        <h5 class="card-title fw-semibold text-dark m-0">Recent Activity Log (Top 5 Latest)</h5>
                     </div>
+                    @if(in_array(auth()->user()->role, ['Super Admin', 'Admin']))
+                        <a href="{{ route('activity-logs.index') }}" class="btn btn-sm btn-outline-primary px-3 small fw-medium">
+                            <i class="bi bi-eye me-1"></i>View All
+                        </a>
+                    @endif
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle table-nowrap mb-0">
+                        <table class="table table-hover align-middle mb-0">
                             <thead class="table-light text-secondary small text-uppercase">
                                 <tr>
-                                    <th scope="col" class="ps-4 py-3" style="width: 25%;">Tanggal</th>
-                                    <th scope="col" class="py-3" style="width: 30%;">User</th>
-                                    <th scope="col" class="py-3 pe-4">Aktivitas</th>
+                                    <th scope="col" class="ps-4 py-3" style="width: 20%;">Date Time</th>
+                                    <th scope="col" class="py-3" style="width: 25%;">User</th>
+                                    <th scope="col" class="py-3" style="width: 30%;">Module</th>
+                                    <th scope="col" class="py-3 pe-4" style="width: 25%;">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="small text-dark">
                                 @forelse($recentActivities as $activity)
                                     <tr>
                                         <td class="ps-4 py-3 fw-medium text-secondary">
-                                            <i class="bi bi-calendar-event me-2"></i>{{ $activity['tanggal'] }}
+                                            <i class="bi bi-calendar-event me-2"></i>{{ $activity->created_at->format('d/m/Y H:i') }}
                                         </td>
                                         <td class="py-3">
                                             <div class="d-flex align-items-center gap-2">
-                                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center fw-semibold text-primary" style="width: 28px; height: 28px; font-size: 0.75rem;">
-                                                    {{ substr($activity['user'], 0, 1) }}
+                                                <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center fw-semibold" style="width: 28px; height: 28px; font-size: 0.75rem; border: 1px solid #e2e8f0;">
+                                                    {{ strtoupper(substr($activity->user->name ?? 'SY', 0, 2)) }}
                                                 </div>
-                                                <span class="fw-semibold">{{ $activity['user'] }}</span>
+                                                <span class="fw-semibold">{{ $activity->user->name ?? 'System / Deleted User' }}</span>
                                             </div>
                                         </td>
-                                        <td class="py-3 pe-4">
-                                            <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 fw-medium" style="font-size: 0.8rem;">
-                                                {{ $activity['aktivitas'] }}
+                                        <td class="py-3">
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-2 py-1.5 fw-medium" style="font-size: 0.8rem;">
+                                                {{ $activity->module }}
                                             </span>
+                                        </td>
+                                        <td class="py-3 pe-4">
+                                            @if(in_array($activity->action, ['Delete', 'Logout']))
+                                                <span class="text-danger fw-semibold"><i class="bi bi-circle-fill me-1 small" style="font-size: 0.5rem;"></i>{{ $activity->action }}</span>
+                                            @elseif(in_array($activity->action, ['Create', 'Login', 'Upload']))
+                                                <span class="text-success fw-semibold"><i class="bi bi-circle-fill me-1 small" style="font-size: 0.5rem;"></i>{{ $activity->action }}</span>
+                                            @else
+                                                <span class="text-warning fw-semibold"><i class="bi bi-circle-fill me-1 small" style="font-size: 0.5rem;"></i>{{ $activity->action }}</span>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="3" class="text-center py-4 text-muted">
-                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i> Belum ada rekaman aktivitas terbaru saat ini.
+                                        <td colspan="4" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                            Belum ada rekaman aktivitas terbaru saat ini.
                                         </td>
                                     </tr>
                                 @endforelse

@@ -7,10 +7,24 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use App\Services\ActivityLog\ActivityLogService;
 use Exception;
 
 class FileService
 {
+    /**
+     * @var ActivityLogService
+     */
+    protected $activityLogService;
+
+    /**
+     * Mendaftarkan ActivityLogService ke dalam Constructor melalui Dependency Injection.
+     */
+    public function __construct(ActivityLogService $activityLogService)
+    {
+        $this->activityLogService = $activityLogService;
+    }
+
     /**
      * Menangani proses upload file dan simpan records ke database.
      *
@@ -37,7 +51,7 @@ class FileService
             $fileType = $uploadedFile->getClientOriginalExtension();
 
             // Simpan metadata ke database Eloquent ORM
-            return File::create([
+            $file = File::create([
                 'folder_id' => $folderId, // Null artinya masuk ke My Files pribadi
                 'user_id' => Auth::id(),
                 'file_name' => $originalName,
@@ -45,6 +59,16 @@ class FileService
                 'file_size' => $fileSize,
                 'file_type' => $fileType,
             ]);
+
+            // Pemicu Log Audit Trail dinamis untuk aksi Upload
+            $context = $folderId ? 'Folder Management' : 'My Files';
+            $this->activityLogService->log(
+                Auth::id(),
+                'Integrasi Data',
+                'Mengunggah berkas baru bernama "' . $file->file_name . '" ke ' . $context
+            );
+
+            return $file;
 
         } catch (Exception $e) {
             throw new Exception('Gagal mengunggah file: ' . $e->getMessage());
@@ -66,12 +90,18 @@ class FileService
 
         $absolutePath = storage_path('app/public/' . $file->file_path);
 
+        // Pemicu Log Audit Trail dinamis untuk aksi Download
+        $this->activityLogService->log(
+            Auth::id(),
+            'Integrasi Data',
+            'Mengunduh berkas "' . $file->file_name . '"'
+        );
+
         return response()->download($absolutePath, $file->file_name);
     }
 
     /**
      * Mengubah nama berkas dokumen (Rename File).
-     * Fixes: Call to unknown method renameFile()
      *
      * @param File $file
      * @param string $newFileName
@@ -81,9 +111,22 @@ class FileService
     public function renameFile(File $file, string $newFileName): bool
     {
         try {
-            return $file->update([
+            $oldFileName = $file->file_name;
+
+            $updated = $file->update([
                 'file_name' => $newFileName
             ]);
+
+            if ($updated) {
+                // Pemicu Log Audit Trail dinamis untuk aksi Rename
+                $this->activityLogService->log(
+                    Auth::id(),
+                    'Integrasi Data',
+                    'Mengubah nama berkas dari "' . $oldFileName . '" menjadi "' . $newFileName . '"'
+                );
+            }
+
+            return $updated;
         } catch (Exception $e) {
             throw new Exception('Gagal mengubah nama file: ' . $e->getMessage());
         }
@@ -91,7 +134,6 @@ class FileService
 
     /**
      * Memindahkan lokasi berkas antar folder / ke ruang bersama (Move File).
-     * Fixes: Call to unknown method moveFile()
      *
      * @param File $file
      * @param int|null $targetFolderId
@@ -101,9 +143,25 @@ class FileService
     public function moveFile(File $file, ?int $targetFolderId): bool
     {
         try {
-            return $file->update([
+            $oldFolderId = $file->folder_id;
+
+            $updated = $file->update([
                 'folder_id' => $targetFolderId
             ]);
+
+            if ($updated) {
+                $fromContext = $oldFolderId ? 'Folder ID #' . $oldFolderId : 'My Files';
+                $toContext = $targetFolderId ? 'Folder ID #' . $targetFolderId : 'My Files';
+
+                // Pemicu Log Audit Trail dinamis untuk aksi Move
+                $this->activityLogService->log(
+                    Auth::id(),
+                    'Integrasi Data',
+                    'Memindahkan berkas "' . $file->file_name . '" dari ' . $fromContext . ' ke ' . $toContext
+                );
+            }
+
+            return $updated;
         } catch (Exception $e) {
             throw new Exception('Gagal memindahkan file: ' . $e->getMessage());
         }
@@ -111,7 +169,6 @@ class FileService
 
     /**
      * Menghapus berkas secara aman menggunakan Soft Delete.
-     * Fixes: Call to unknown method deleteFile()
      *
      * @param File $file
      * @return bool|null
@@ -120,8 +177,21 @@ class FileService
     public function deleteFile(File $file): ?bool
     {
         try {
+            $fileName = $file->file_name;
+
             // Menggunakan softDeletes() sesuai source of truth database design
-            return $file->delete();
+            $deleted = $file->delete();
+
+            if ($deleted) {
+                // Pemicu Log Audit Trail dinamis untuk aksi Delete
+                $this->activityLogService->log(
+                    Auth::id(),
+                    'Integrasi Data',
+                    'Melakukan soft delete pada berkas "' . $fileName . '"'
+                );
+            }
+
+            return $deleted;
         } catch (Exception $e) {
             throw new Exception('Gagal menghapus file: ' . $e->getMessage());
         }
